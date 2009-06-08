@@ -13,7 +13,7 @@
 
 int feuler(pcord_t *a, float time_step){
 	a->x = a->x + time_step* a->vx;
-	a->y = a->y + time_step* a->vy;	    
+	a->y = a->y + time_step* a->vy;
 	return 0;
 }
 
@@ -32,7 +32,7 @@ float wall_collide(pcord_t *p, cord_t wall){
 	}
 	if(p->y < wall.y0){
 		p->vy = -p->vy;
-		p->y  = wall.y0 + (wall.y0-p->y);	
+		p->y  = wall.y0 + (wall.y0-p->y);
 		gPreassure += 2.0*fabs(p->vy);
 	}
 	if(p->y > wall.y1){
@@ -51,7 +51,7 @@ float collide(pcord_t *p1, pcord_t *p2){
 	b=2*((p1->x - p2->x)*(p1->vx - p2->vx)+(p1->y - p2->y)*(p1->vy - p2->vy));
 	c=sqr(p1->x-p2->x)+sqr(p1->y-p2->y)-4*1*1;
 
-	if (a!=0.0){	
+	if (a!=0.0){
 		temp=sqr(b)-4*a*c;
 		if (temp>=0){
 			temp=sqrt(temp);
@@ -66,7 +66,7 @@ float collide(pcord_t *p1, pcord_t *p2){
 			if ((t1>=0)&(t1<=1))
 				return t1;
 			else if ((t2>=0)&(t2<=1))
-				return t2;    
+				return t2;
 		}
 	}
 	return -1;
