@@ -178,3 +178,8 @@ void interact(pcord_t *p1,pcord_t *p2, float t){
 		(void)feuler(p2,c);
 	}
 }
+
+double rand01()
+{
+	return ((double)rand()/((double)(RAND_MAX)+(double)(1)));
+}

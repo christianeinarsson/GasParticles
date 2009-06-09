@@ -29,14 +29,15 @@ struct particle {
 typedef struct particle particle_t;
 
 #define TIME_STEPS 5
+#define TIME_STEP 1
 
 struct slice_data {
-	int current;
-	int keeping;
-	int sendingUp;
-	int sendingDown;
+	unsigned int current;
+	unsigned int keeping;
+	unsigned int sendingUp;
+	unsigned int sendingDown;
+	unsigned int wallCollisions;
 	float pressure;
-	int wallCollisions;
 };
 
 typedef struct slice_data slice_data_t;

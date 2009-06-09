@@ -21,4 +21,6 @@ float collide(pcord_t *p1, pcord_t *p2);
 
 void interact(pcord_t *p1, pcord_t *p2, float t);
 
+double rand01();
+
 #endif
