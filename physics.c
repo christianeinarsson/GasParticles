@@ -43,6 +43,56 @@ float wall_collide(pcord_t *p, cord_t wall){
 	return gPreassure;
 }
 
+float wall_collide_top(pcord_t *p, cord_t wall){
+	float gPreassure = 0.0;
+
+	if(p->y < wall.y0){
+		p->vy = -p->vy;
+		p->y  = wall.y0 + (wall.y0-p->y);
+		gPreassure += 2.0*fabs(p->vy);
+	}
+	return gPreassure;
+}
+
+float wall_collide_bottom(pcord_t *p, cord_t wall){
+	float gPreassure = 0.0;
+
+	if(p->y > wall.y1){
+		p->vy = -p->vy;
+		p->y  = wall.y1 - (p->y-wall.y1);
+		gPreassure += 2.0*fabs(p->vy);
+	}
+	return gPreassure;
+}
+float wall_collide_leftright(pcord_t *p, cord_t wall){
+	float gPreassure = 0.0;
+
+	if(p->x < wall.x0){
+		p->vx = -p->vx;
+		p->x  = wall.x0 + (wall.x0-p->x);
+		gPreassure += 2.0*fabs(p->vx);
+	}
+	if(p->x > wall.x1){
+		p->vx = -p->vx;
+		p->x  = wall.x1 - (p->x-wall.x1);
+		gPreassure += 2.0*fabs(p->vx);
+	}
+	return gPreassure;
+}
+
+int particle_escape_top(pcord_t *p, cord_t limits){
+	if(p->y < limits.y0){
+		return 1;
+	}
+	return 0;
+}
+int particle_escape_bottom(pcord_t *p, cord_t limits){
+	if(p->y > limits.y1){
+		return 1;
+	}
+	return 0;
+}
+
 float collide(pcord_t *p1, pcord_t *p2){
 	double a,b,c;
 	double temp,t1,t2;

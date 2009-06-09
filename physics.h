@@ -8,15 +8,17 @@
 int feuler(pcord_t *a,
 		   float time_step);
 
-float wall_collide(pcord_t *p,
-				   cord_t wall);
+float wall_collide(pcord_t *p, cord_t wall);
+
+float wall_collide_top(pcord_t *p, cord_t wall);
+float wall_collide_bottom(pcord_t *p, cord_t wall);
+float wall_collide_leftright(pcord_t *p, cord_t wall);
+int particle_escape_top(pcord_t *p, cord_t limits);
+int particle_escape_bottom(pcord_t *p, cord_t limits);
 
 
-float collide(pcord_t *p1,
-			  pcord_t *p2);
+float collide(pcord_t *p1, pcord_t *p2);
 
-void interact(pcord_t *p1,
-			  pcord_t *p2,
-			  float t);
+void interact(pcord_t *p1, pcord_t *p2, float t);
 
 #endif

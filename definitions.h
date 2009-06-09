@@ -10,7 +10,7 @@
 #define PI 3.141592653
 
 #define MAX_NO_PARTICLES  15000  /* Maximum number of particles/processor */
-#define INIT_NO_PARTICLES 500    /* Initial number of particles/processor */
+#define INIT_NO_PARTICLES 5 //500    /* Initial number of particles/processor */
 #define MAX_INITIAL_VELOCITY 50
 
 
@@ -27,5 +27,23 @@ struct particle {
 };
 
 typedef struct particle particle_t;
+
+#define TIME_STEPS 5
+
+struct slice_data {
+	int current;
+	int keeping;
+	int sendingUp;
+	int sendingDown;
+	float pressure;
+	int wallCollisions;
+};
+
+typedef struct slice_data slice_data_t;
+
+#define TAG_SEND_UP 666
+#define TAG_SEND_DOWN 999
+
+#define swap(type, i, j) {type t = i; i = j; j = t;}
 
 #endif
