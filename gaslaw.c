@@ -164,7 +164,6 @@ int main(int argc, char *argv[])
 		sd->sendingDown = 0;
 
 		// Outer particle loop
-		if(isMaster) pmesg(97, "for all particles do\n");
 		for(int po = 0; po < sd->current; po++)
 		{
 			float pressure;
@@ -174,21 +173,17 @@ int main(int argc, char *argv[])
 			// (sd->current)^2 matrix (from po and down)
 			for(int pi = po+1; pi < sd->current; pi++)
 			{
-				if(isMaster) pmesg(96, "Check for collisions between %d and %d\n", po, pi);
 				float collision = collide(&particles[po], &particles[pi]);
 				if(collision != -1)
 				{
-					if(isMaster) pmesg(80, "Collision between %d and %d, returned %f\n", po, pi, collision);
 					interact(&particles[po], &particles[pi], collision);
 					// Don't do further collision checks to cut calculations
 					break;
 				}else{
-					if(isMaster) pmesg(95, "No collision between %d and %d\n", po, pi);
 					feuler(&particles[po], TIME_STEP);
 				}
 			}
 
-			if(isMaster) pmesg(97, "Check for wall interaction and add the momentum\n");
 			// Check left and right wall collisions
 			// Done first, they may bounce out of slice bounds
 			pressure = wall_collide_leftright(&particles[po], walls);
@@ -242,130 +237,68 @@ int main(int argc, char *argv[])
 			}
 		}
 
-		if(isMaster) pmesg(97, "Communicate if needed\n");
-
 		// All processors knows all the other data
 		// Might be overkill, could just send to sliceAbove, sliceBelow and perhaps root
+		// TODO: Even better, use MPI_Isend and MPI_Probe
 		MPI_Allgather(sd, 1, MPI_SLICE_DATA, sliceData, 1, MPI_SLICE_DATA, MPI_COMM_WORLD);
-
-		// Print stats
-		MPI_Barrier(MPI_COMM_WORLD);
-		if(isMaster)
-		{
-			pmesg(70, "Slice data for iteration %d\n", t);
-			pmesg(70, "ID\tCURR\tKEEP\tUP  \tDOWN\tPRESSURE\tWCOL\n");
-			for(int i = 0; i < np; i++){
-				pmesg(70, "%3d\t%4d\t%4d\t%4d\t%4d\t%4.04f\t\t%4d\n", i, sliceData[i].current, sliceData[i].keeping, sliceData[i].sendingUp, sliceData[i].sendingDown, sliceData[i].pressure, sliceData[i].wallCollisions);
-			}
-		}
-		MPI_Barrier(MPI_COMM_WORLD);
-		if(isMaster){
-			printParticles(85, sd->current, particles, me, "particles");
-			printParticles(85, sd->keeping, particlesNext, me, "particlesNext");
-			printParticles(85, sd->sendingUp, particlesSendUp, me, "particlesSendUp");
-			printParticles(85, sd->sendingDown, particlesSendDown, me, "particlesSendDown");
-		}
-		MPI_Barrier(MPI_COMM_WORLD);
 
 		// Send up, but only if there's something to send
 		if(!isFirstSlice && sd->sendingUp != 0)
 		{
-			pmesg(70, "Sending %d->%d\n", me, sliceAbove);
 			MPI_Send(particlesSendUp, sd->sendingUp, MPI_COORDINATE, sliceAbove, TAG_SEND_UP, MPI_COMM_WORLD);
 		}
 
 		// Receive from below, but only if there's something to receive
 		if(!isLastSlice && sliceData[sliceBelow].sendingUp != 0)
 		{
-			pmesg(70, "Receiving %d<-%d (%d coordinates)\n", me, sliceBelow, sliceData[sliceBelow].sendingUp);
 			pcord_t * particlesReceive = (pcord_t *) malloc(sizeof(pcord_t) * sliceData[sliceBelow].sendingUp);
 
 			MPI_Status status;
 			// TODO: Add MPI_Probe first to get buffer size of incoming data
 			// http://www.mpi-forum.org/docs/mpi-11-html/node50.html#Node50
 			MPI_Recv(particlesReceive, sliceData[sliceBelow].sendingUp, MPI_COORDINATE, sliceBelow, TAG_SEND_UP, MPI_COMM_WORLD, &status);
-			//pmesg(70, "Received %d<-%d with status %d and size %d\n", me, sliceBelow, status->ERROR, status->size);
-			//pmesg(70, "Received %d<-%d with status %d and size %s\n", me, sliceBelow, status);
-
-			printParticles(85, sd->keeping, particlesNext, me, "particlesNext");
 
 			// Insert sorted according to x position if possible?
 			// Would increase the chances of a collision with a neighbor
 			// and since collisions cut calculations, it would be efficient
 			for(int pr = 0; pr < sliceData[sliceBelow].sendingUp; pr++)
 			{
-				pmesg(70, "Adding %d[%d]<-%d[%d]\n", me, sd->keeping, sliceBelow, pr);
-				// TODO: THIS IS WHERE IT BREAKS *************************************************************************
-				// Segfault if a particle has escaped to here, need to allocate memory by MPI_Probe above
-				//particlesNext[sd->keeping] = particlesSendUp[pr];
-				pmesg(70, "%d says %d[%d] = %d\t%d\t%d\t%d\n", me, sliceBelow, pr, particlesReceive[pr].x, particlesReceive[pr].y, particlesReceive[pr].vx, particlesReceive[pr].vy);
-				particlesNext[sd->keeping].x = particlesReceive[pr].x;
-				particlesNext[sd->keeping].y = particlesReceive[pr].y;
-				particlesNext[sd->keeping].vx = particlesReceive[pr].vx;
-				particlesNext[sd->keeping].vy = particlesReceive[pr].vy;
-				//memcpy(&particlesNext[sd->keeping], &particlesSendUp[pr], sizeof(pcord_t));
+				particlesNext[sd->keeping] = particlesSendUp[pr];
 				sd->keeping++;
-				pmesg(70, "Added %d[%d]<-%d[%d]\n", me, sd->keeping, sliceBelow, pr);
 			}
 			free(particlesReceive);
 		}
-		if(isMaster)
-		{
-			pmesg(95, "Done sending/receiving up %d\n", me);
-		}
-		else{
-			pmesg(95, "Done sending/receiving up %d\n", me);
-		}
+
+		// TODO: Is this barrier needed? Might only need explicit sync once per time step
 		MPI_Barrier(MPI_COMM_WORLD);
-		if(isMaster) pmesg(70, "Done sending/receiving up iteration %d\n", t);
 
 		// Send down, but only if there's something to send
 		if(!isLastSlice && sd->sendingDown != 0)
 		{
-			pmesg(70, "Sending %d->%d\n", me, sliceBelow);
 			MPI_Send(particlesSendDown, sd->sendingDown, MPI_COORDINATE, sliceBelow, TAG_SEND_DOWN, MPI_COMM_WORLD);
 		}
 
 		// Receive from above, but only if there's something to receive
 		if(!isFirstSlice && sliceData[sliceAbove].sendingDown != 0)
 		{
-			pmesg(70, "Receiving %d<-%d (%d coordinates)\n", me, sliceAbove, sliceData[sliceAbove].sendingDown);
-			//pcord_t * particlesReceive = (pcord_t *) malloc(sizeof(pcord_t) * sliceData[sliceAbove].sendingDown);
-
 			// TODO: Add MPI_Probe first to get buffer size of incoming data
 			// http://www.mpi-forum.org/docs/mpi-11-html/node50.html#Node50
 			MPI_Status status;
 			MPI_Recv(particlesSendDown, sliceData[sliceAbove].sendingDown, MPI_COORDINATE, sliceAbove, TAG_SEND_DOWN, MPI_COMM_WORLD, &status);
-
-			printParticles(85, sd->keeping, particlesNext, me, "particlesNext");
 
 			// Insert sorted according to x position if possible?
 			// Would increase the chances of a collision with a neighbor
 			// and since collisions cut calculations, it would be efficient
 			for(int pr = 0; pr < sliceData[sliceAbove].sendingDown; pr++)
 			{
-				// TODO: THIS IS WHERE IT BREAKS *************************************************************************
-				// Segfault if a particle has escaped to here, need to allocate memory by MPI_Probe above
-				//particlesNext[sd->keeping] = particlesSendDown[pr];
-				// Try to copy values one by one
-				particlesNext[sd->keeping].x = particlesSendDown[pr].x;
-				particlesNext[sd->keeping].y = particlesSendDown[pr].y;
-				particlesNext[sd->keeping].vx = particlesSendDown[pr].vx;
-				particlesNext[sd->keeping].vy = particlesSendDown[pr].vy;
+				particlesNext[sd->keeping] = particlesSendDown[pr];
 				sd->keeping++;
 			}
 			//free(particlesReceive);
 		}
-		if(isMaster)
-		{
-			pmesg(95, "Done sending/receiving down %d\n", me);
-		}
-		else
-		{
-			pmesg(95, "Done sending/receiving down %d\n", me);
-		}
+
+		// TODO: Is this barrier needed? Might only need explicit sync once per time step
 		MPI_Barrier(MPI_COMM_WORLD);
-		if(isMaster) pmesg(70, "Done sending/receiving down iteration %d\n", t);
 
 		// Use the kept particles for the next iteration
 		sd->current = sd->keeping;
