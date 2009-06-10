@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <math.h>
 #include "physics.h"
+#include "debug.h"
 
 #ifndef sqr
 #define sqr(a) ((a)*(a))
@@ -182,4 +183,11 @@ void interact(pcord_t *p1,pcord_t *p2, float t){
 double rand01()
 {
 	return ((double)rand()/((double)(RAND_MAX)+(double)(1)));
+}
+
+void printParticles(int msglevel, int count, pcord_t particles[], int rank, const char * name){
+	pmesg(msglevel, "%d has %s[%5d]        x \t     y  \t    vx  \t    vy\n", rank, name, count);
+	for(int i = 0; i < count; i++){
+		pmesg(msglevel, "%d has %s[%5d] = %9.2f\t%9.2f\t%9.2f\t%9.2f\n", rank, name, i, particles[i].x, particles[i].y, particles[i].vx, particles[i].vy);
+	}
 }

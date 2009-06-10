@@ -7,28 +7,30 @@
 #include "definitions.h"
 #include "debug.h"
 
-int msglevel = 94;
+int msglevel = 60;
 
 int main(int argc, char *argv[])
 {
 	int np;
 	int me;
 	{
-		int ierr = MPI_Init(&argc, &argv);
-		MPI_Comm_size(MPI_COMM_WORLD, &np);
-		MPI_Comm_rank(MPI_COMM_WORLD, &me);
+		int ierr = MPI_Init(& argc, & argv);
+		MPI_Comm_size(MPI_COMM_WORLD, & np);
+		MPI_Comm_rank(MPI_COMM_WORLD, & me);
 	}
-	pmesg(75, "Initiate MPI: %d/%d\n", me, np);
+	pmesg(99, "Hello from node %d\n", me);
 
-	int isMaster = (me == 0);
-	int sliceAbove = (me-1);
-	int sliceBelow = (me+1);
+	int isMaster = (me == 0 ? 1 : 0);
+	int sliceAbove = (me - 1);
+	int sliceBelow = (me + 1);
 	int isFirstSlice = (me == 0 ? 1 : 0);
-	int isLastSlice = (me == (np-1) ? 1 : 0);
+	int isLastSlice = (me == (np - 1) ? 1 : 0);
 
 	// Check preconditions
-	if(isMaster){
-		if(np < 3){
+	if(isMaster)
+	{
+		if(np < 3)
+		{
 			fprintf(stderr, "Just %d MPI nodes is too few - need at least three.\n", np);
 			MPI_Finalize();
 			exit(1);
@@ -41,48 +43,48 @@ int main(int argc, char *argv[])
 	{
 		// MPI commiting type particle
 		{
-			pcord_t item; // Element of the type
-			int block_lengths[] = { 1, 1, 1, 1 }; // Set lengths of type elements
-			MPI_Datatype block_types[] = { MPI_FLOAT, MPI_FLOAT, MPI_FLOAT, MPI_FLOAT }; // Set types
-			MPI_Aint start, displ[4];
-			MPI_Address(& item, & start);
-			MPI_Address(& item.x, & displ[0]);
-			MPI_Address(& item.y, & displ[1]);
-			MPI_Address(& item.vx, & displ[2]);
-			MPI_Address(& item.vy, & displ[3]);
-			displ[0] -= start; // Displacement relative to address of start
-			displ[1] -= start; // Displacement relative to address of start
-			displ[2] -= start; // Displacement relative to address of start
-			displ[3] -= start; // Displacement relative to address of start
-			MPI_Type_struct(4, block_lengths, displ, block_types, & MPI_COORDINATE);
+			pcord_t pcord_t_item; // Element of the type
+			int pcord_t_block_lengths[] = { 1, 1, 1, 1 }; // Set lengths of type elements
+			MPI_Datatype pcord_t_block_types[] = { MPI_FLOAT, MPI_FLOAT, MPI_FLOAT, MPI_FLOAT }; // Set types
+			MPI_Aint pcord_t_start, pcord_t_displ[4];
+			MPI_Address(& pcord_t_item, & pcord_t_start);
+			MPI_Address(& pcord_t_item.x, & pcord_t_displ[0]);
+			MPI_Address(& pcord_t_item.y, & pcord_t_displ[1]);
+			MPI_Address(& pcord_t_item.vx, & pcord_t_displ[2]);
+			MPI_Address(& pcord_t_item.vy, & pcord_t_displ[3]);
+			pcord_t_displ[0] -= pcord_t_start; // Displacement relative to address of start
+			pcord_t_displ[1] -= pcord_t_start; // Displacement relative to address of start
+			pcord_t_displ[2] -= pcord_t_start; // Displacement relative to address of start
+			pcord_t_displ[3] -= pcord_t_start; // Displacement relative to address of start
+			MPI_Type_create_struct(4, pcord_t_block_lengths, pcord_t_displ, pcord_t_block_types, & MPI_COORDINATE);
 			MPI_Type_commit(& MPI_COORDINATE);
 		}
 
-		// MPI commiting type slice_send_size_t
+		// MPI commiting type slice_data_t
 		{
-			slice_data_t item; // Element of the type
-			int block_lengths[] = { 1, 1, 1, 1, 1, 1 }; // Set lengths of type elements
-			MPI_Datatype block_types[] = { MPI_UNSIGNED, MPI_UNSIGNED, MPI_UNSIGNED, MPI_UNSIGNED, MPI_UNSIGNED, MPI_FLOAT }; // Set types
-			MPI_Aint start, displ[6];
-			MPI_Address(& item, & start);
-			MPI_Address(& item.current, & displ[0]);
-			MPI_Address(& item.keeping, & displ[1]);
-			MPI_Address(& item.sendingUp, & displ[2]);
-			MPI_Address(& item.sendingDown, & displ[3]);
-			MPI_Address(& item.wallCollisions, & displ[4]);
-			MPI_Address(& item.pressure, & displ[5]);
-			displ[0] -= start; // Displacement relative to address of start
-			displ[1] -= start; // Displacement relative to address of start
-			displ[2] -= start; // Displacement relative to address of start
-			displ[3] -= start; // Displacement relative to address of start
-			displ[4] -= start; // Displacement relative to address of start
-			displ[5] -= start; // Displacement relative to address of start
-			MPI_Type_struct(6, block_lengths, displ, block_types, & MPI_SLICE_DATA);
+			slice_data_t slice_data_t_item; // Element of the type
+			int slice_data_t_block_lengths[] = { 1, 1, 1, 1, 1, 1 }; // Set lengths of type elements
+			MPI_Datatype slice_data_t_block_types[] = { MPI_UNSIGNED, MPI_UNSIGNED, MPI_UNSIGNED, MPI_UNSIGNED, MPI_UNSIGNED, MPI_FLOAT }; // Set types
+			MPI_Aint slice_data_t_start, slice_data_t_displ[6];
+			MPI_Address(& slice_data_t_item, & slice_data_t_start);
+			MPI_Address(& slice_data_t_item.current, & slice_data_t_displ[0]);
+			MPI_Address(& slice_data_t_item.keeping, & slice_data_t_displ[1]);
+			MPI_Address(& slice_data_t_item.sendingUp, & slice_data_t_displ[2]);
+			MPI_Address(& slice_data_t_item.sendingDown, & slice_data_t_displ[3]);
+			MPI_Address(& slice_data_t_item.wallCollisions, & slice_data_t_displ[4]);
+			MPI_Address(& slice_data_t_item.pressure, & slice_data_t_displ[5]);
+			slice_data_t_displ[0] -= slice_data_t_start; // Displacement relative to address of start
+			slice_data_t_displ[1] -= slice_data_t_start; // Displacement relative to address of start
+			slice_data_t_displ[2] -= slice_data_t_start; // Displacement relative to address of start
+			slice_data_t_displ[3] -= slice_data_t_start; // Displacement relative to address of start
+			slice_data_t_displ[4] -= slice_data_t_start; // Displacement relative to address of start
+			slice_data_t_displ[5] -= slice_data_t_start; // Displacement relative to address of start
+			MPI_Type_create_struct(6, slice_data_t_block_lengths, slice_data_t_displ, slice_data_t_block_types, & MPI_SLICE_DATA);
 			MPI_Type_commit(& MPI_SLICE_DATA);
 		}
 	}
 
-	if(isMaster) pmesg(70, "Divide rectangle into horizontal slices\n");
+	if(isMaster) pmesg(97, "Divide rectangle into horizontal slices\n");
 	cord_t slice;
 	{
 		slice.x0 = 0;
@@ -91,7 +93,7 @@ int main(int argc, char *argv[])
 		slice.y1 = (me + 1) * (BOX_VERT_SIZE / np);
 	}
 
-	if(isMaster) pmesg(70, "Initiate walls\n");
+	if(isMaster) pmesg(97, "Initiate walls\n");
 	cord_t walls;
 	{
 		walls.x0 = 0;
@@ -100,7 +102,7 @@ int main(int argc, char *argv[])
 		walls.y1 = BOX_VERT_SIZE;
 	}
 
-	if(isMaster) pmesg(70, "Initiate particles\n");
+	if(isMaster) pmesg(97, "Initiate particles\n");
 	pcord_t * particles;
 	pcord_t * particlesNext;
 	pcord_t * particlesSendUp;
@@ -142,13 +144,16 @@ int main(int argc, char *argv[])
 	MPI_Barrier(MPI_COMM_WORLD);
 	if(isMaster)
 	{
-		pmesg(70, "Slice data at startup in node\n");
-		pmesg(70, "ID\tCURR\tKEEP\tUP  \tDOWN\tPRESSURE\tWCOL\n");
+		printParticles(90, sd->current, particles, me, "particles");
+
+		pmesg(90, "Slice data at startup in node\n");
+		pmesg(90, "ID\tCURR\tKEEP\tUP  \tDOWN\tPRESSURE\tWCOL\n");
 	}
-	pmesg(70, "%3d\t%4d\t%4d\t%4d\t%4d\t%4.04f\t\t%4d\n", me, sliceData[me].current, sliceData[me].keeping, sliceData[me].sendingUp, sliceData[me].sendingDown, sliceData[me].pressure, sliceData[me].wallCollisions);
+	MPI_Barrier(MPI_COMM_WORLD);
+	pmesg(90, "%3d\t%4d\t%4d\t%4d\t%4d\t%4.04f\t\t%4d\n", me, sliceData[me].current, sliceData[me].keeping, sliceData[me].sendingUp, sliceData[me].sendingDown, sliceData[me].pressure, sliceData[me].wallCollisions);
 	MPI_Barrier(MPI_COMM_WORLD);
 
-	if(isMaster) pmesg(70, "Main loop: for each time-step do\n");
+	if(isMaster) pmesg(97, "Main loop: for each time-step do\n");
 	for(int t = 0; t < TIME_STEPS; t += TIME_STEP)
 	{
 		MPI_Barrier(MPI_COMM_WORLD);
@@ -159,7 +164,7 @@ int main(int argc, char *argv[])
 		sd->sendingDown = 0;
 
 		// Outer particle loop
-		if(isMaster) pmesg(75, "for all particles do\n");
+		if(isMaster) pmesg(97, "for all particles do\n");
 		for(int po = 0; po < sd->current; po++)
 		{
 			float pressure;
@@ -183,7 +188,7 @@ int main(int argc, char *argv[])
 				}
 			}
 
-			if(isMaster) pmesg(80, "Check for wall interaction and add the momentum\n");
+			if(isMaster) pmesg(97, "Check for wall interaction and add the momentum\n");
 			// Check left and right wall collisions
 			// Done first, they may bounce out of slice bounds
 			pressure = wall_collide_leftright(&particles[po], walls);
@@ -230,14 +235,14 @@ int main(int argc, char *argv[])
 				escaped = 1;
 			}
 
-			if(!escaped)
+			if(escaped == 0)
 			{
 				particlesNext[sd->keeping] = particles[po];
 				sd->keeping++;
 			}
 		}
 
-		if(isMaster) pmesg(80, "Communicate if needed\n");
+		if(isMaster) pmesg(97, "Communicate if needed\n");
 
 		// All processors knows all the other data
 		// Might be overkill, could just send to sliceAbove, sliceBelow and perhaps root
@@ -254,23 +259,35 @@ int main(int argc, char *argv[])
 			}
 		}
 		MPI_Barrier(MPI_COMM_WORLD);
+		if(isMaster){
+			printParticles(85, sd->current, particles, me, "particles");
+			printParticles(85, sd->keeping, particlesNext, me, "particlesNext");
+			printParticles(85, sd->sendingUp, particlesSendUp, me, "particlesSendUp");
+			printParticles(85, sd->sendingDown, particlesSendDown, me, "particlesSendDown");
+		}
+		MPI_Barrier(MPI_COMM_WORLD);
 
 		// Send up, but only if there's something to send
 		if(!isFirstSlice && sd->sendingUp != 0)
 		{
 			pmesg(70, "Sending %d->%d\n", me, sliceAbove);
-			MPI_Send(&particlesSendUp, sd->sendingUp, MPI_COORDINATE, sliceAbove, TAG_SEND_UP, MPI_COMM_WORLD);
+			MPI_Send(particlesSendUp, sd->sendingUp, MPI_COORDINATE, sliceAbove, TAG_SEND_UP, MPI_COMM_WORLD);
 		}
 
 		// Receive from below, but only if there's something to receive
 		if(!isLastSlice && sliceData[sliceBelow].sendingUp != 0)
 		{
-			pmesg(70, "Receiving %d<-%d\n", me, sliceBelow);
+			pmesg(70, "Receiving %d<-%d (%d coordinates)\n", me, sliceBelow, sliceData[sliceBelow].sendingUp);
+			pcord_t * particlesReceive = (pcord_t *) malloc(sizeof(pcord_t) * sliceData[sliceBelow].sendingUp);
+
 			MPI_Status status;
 			// TODO: Add MPI_Probe first to get buffer size of incoming data
 			// http://www.mpi-forum.org/docs/mpi-11-html/node50.html#Node50
-			MPI_Recv(&particlesSendUp, MAX_NO_PARTICLES, MPI_COORDINATE, sliceBelow, TAG_SEND_UP, MPI_COMM_WORLD, &status);
-			pmesg(70, "Received %d<-%d\n", me, sliceBelow);
+			MPI_Recv(particlesReceive, sliceData[sliceBelow].sendingUp, MPI_COORDINATE, sliceBelow, TAG_SEND_UP, MPI_COMM_WORLD, &status);
+			//pmesg(70, "Received %d<-%d with status %d and size %d\n", me, sliceBelow, status->ERROR, status->size);
+			//pmesg(70, "Received %d<-%d with status %d and size %s\n", me, sliceBelow, status);
+
+			printParticles(85, sd->keeping, particlesNext, me, "particlesNext");
 
 			// Insert sorted according to x position if possible?
 			// Would increase the chances of a collision with a neighbor
@@ -280,15 +297,21 @@ int main(int argc, char *argv[])
 				pmesg(70, "Adding %d[%d]<-%d[%d]\n", me, sd->keeping, sliceBelow, pr);
 				// TODO: THIS IS WHERE IT BREAKS *************************************************************************
 				// Segfault if a particle has escaped to here, need to allocate memory by MPI_Probe above
-				particlesNext[sd->keeping] = particlesSendUp[pr];
+				//particlesNext[sd->keeping] = particlesSendUp[pr];
+				pmesg(70, "%d says %d[%d] = %d\t%d\t%d\t%d\n", me, sliceBelow, pr, particlesReceive[pr].x, particlesReceive[pr].y, particlesReceive[pr].vx, particlesReceive[pr].vy);
+				particlesNext[sd->keeping].x = particlesReceive[pr].x;
+				particlesNext[sd->keeping].y = particlesReceive[pr].y;
+				particlesNext[sd->keeping].vx = particlesReceive[pr].vx;
+				particlesNext[sd->keeping].vy = particlesReceive[pr].vy;
 				//memcpy(&particlesNext[sd->keeping], &particlesSendUp[pr], sizeof(pcord_t));
 				sd->keeping++;
 				pmesg(70, "Added %d[%d]<-%d[%d]\n", me, sd->keeping, sliceBelow, pr);
 			}
+			free(particlesReceive);
 		}
 		if(isMaster)
 		{
-			pmesg(70, "Done sending/receiving up %d\n", me);
+			pmesg(95, "Done sending/receiving up %d\n", me);
 		}
 		else{
 			pmesg(95, "Done sending/receiving up %d\n", me);
@@ -300,17 +323,21 @@ int main(int argc, char *argv[])
 		if(!isLastSlice && sd->sendingDown != 0)
 		{
 			pmesg(70, "Sending %d->%d\n", me, sliceBelow);
-			MPI_Send(&particlesSendDown, sd->sendingDown, MPI_COORDINATE, sliceBelow, TAG_SEND_DOWN, MPI_COMM_WORLD);
+			MPI_Send(particlesSendDown, sd->sendingDown, MPI_COORDINATE, sliceBelow, TAG_SEND_DOWN, MPI_COMM_WORLD);
 		}
 
 		// Receive from above, but only if there's something to receive
 		if(!isFirstSlice && sliceData[sliceAbove].sendingDown != 0)
 		{
-			pmesg(70, "Receiving %d<-%d\n", me, sliceAbove);
+			pmesg(70, "Receiving %d<-%d (%d coordinates)\n", me, sliceAbove, sliceData[sliceAbove].sendingDown);
+			//pcord_t * particlesReceive = (pcord_t *) malloc(sizeof(pcord_t) * sliceData[sliceAbove].sendingDown);
+
 			// TODO: Add MPI_Probe first to get buffer size of incoming data
 			// http://www.mpi-forum.org/docs/mpi-11-html/node50.html#Node50
 			MPI_Status status;
-			MPI_Recv(&particlesSendDown, MAX_NO_PARTICLES, MPI_COORDINATE, sliceAbove, TAG_SEND_DOWN, MPI_COMM_WORLD, &status);
+			MPI_Recv(particlesSendDown, sliceData[sliceAbove].sendingDown, MPI_COORDINATE, sliceAbove, TAG_SEND_DOWN, MPI_COMM_WORLD, &status);
+
+			printParticles(85, sd->keeping, particlesNext, me, "particlesNext");
 
 			// Insert sorted according to x position if possible?
 			// Would increase the chances of a collision with a neighbor
@@ -319,13 +346,19 @@ int main(int argc, char *argv[])
 			{
 				// TODO: THIS IS WHERE IT BREAKS *************************************************************************
 				// Segfault if a particle has escaped to here, need to allocate memory by MPI_Probe above
-				particlesNext[sd->keeping] = particlesSendDown[pr];
+				//particlesNext[sd->keeping] = particlesSendDown[pr];
+				// Try to copy values one by one
+				particlesNext[sd->keeping].x = particlesSendDown[pr].x;
+				particlesNext[sd->keeping].y = particlesSendDown[pr].y;
+				particlesNext[sd->keeping].vx = particlesSendDown[pr].vx;
+				particlesNext[sd->keeping].vy = particlesSendDown[pr].vy;
 				sd->keeping++;
 			}
+			//free(particlesReceive);
 		}
 		if(isMaster)
 		{
-			pmesg(70, "Done sending/receiving down %d\n", me);
+			pmesg(95, "Done sending/receiving down %d\n", me);
 		}
 		else
 		{
@@ -342,12 +375,13 @@ int main(int argc, char *argv[])
 	// One last gather to calculate total pressure
 	MPI_Gather(sd, 1, MPI_SLICE_DATA, sliceData, 1, MPI_SLICE_DATA, 0, MPI_COMM_WORLD);
 
+	MPI_Barrier(MPI_COMM_WORLD);
 	if(isMaster)
 	{
-		pmesg(70, "Slice data when done\n");
-		pmesg(70, "ID\tCURR\tKEEP\tUP  \tDOWN\tPRESSURE\tWCOL\n");
+		pmesg(40, "Slice data when done\n");
+		pmesg(40, "ID\tCURR\tKEEP\tUP  \tDOWN\tPRESSURE\tWCOL\n");
 		for(int i = 0; i < np; i++){
-			pmesg(70, "%3d\t%4d\t%4d\t%4d\t%4d\t%4.04f\t\t%4d\n", i, sliceData[i].current, sliceData[i].keeping, sliceData[i].sendingUp, sliceData[i].sendingDown, sliceData[i].pressure, sliceData[i].wallCollisions);
+			pmesg(40, "%3d\t%4d\t%4d\t%4d\t%4d\t%4.04f\t\t%4d\n", i, sliceData[i].current, sliceData[i].keeping, sliceData[i].sendingUp, sliceData[i].sendingDown, sliceData[i].pressure, sliceData[i].wallCollisions);
 		}
 
 		pmesg(70, "Calculate pressure\n");
@@ -358,8 +392,9 @@ int main(int argc, char *argv[])
 				totalPressure += sliceData[i].pressure;
 			}
 			averagePressure = (totalPressure / (WALL_LENGTH * TIME_STEPS));
-			pmesg(70, "Calculated pressure to be %f\n", averagePressure);
+			pmesg(0, "Calculated pressure to be %.5f in a box with size %.1f by %.1f over %d time steps with %d particles.\n", averagePressure, BOX_HORIZ_SIZE, BOX_VERT_SIZE, TIME_STEPS, INIT_NO_PARTICLES*np);
 		}
 	}
+	MPI_Barrier(MPI_COMM_WORLD);
 	MPI_Finalize();
 }

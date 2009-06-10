@@ -23,4 +23,6 @@ void interact(pcord_t *p1, pcord_t *p2, float t);
 
 double rand01();
 
+void printParticles(int msglevel, int count, pcord_t particles[], int rank, const char * name);
+
 #endif
