@@ -187,6 +187,12 @@ int main(int argc, char *argv[])
 	VT_funcdef("Step:Send:Up", VT_NOCLASS, &symdef_step_send_up);
 	int symdef_step_send_down;
 	VT_funcdef("Step:Send:Down", VT_NOCLASS, &symdef_step_send_down);
+	int symdef_step_recv;
+	VT_funcdef("Step:Recv", VT_NOCLASS, &symdef_step_send);
+	int symdef_step_recv_up;
+	VT_funcdef("Step:Recv:Up", VT_NOCLASS, &symdef_step_send_up);
+	int symdef_step_recv_down;
+	VT_funcdef("Step:Recv:Down", VT_NOCLASS, &symdef_step_send_down);
 
 	for(int t = 0; t < TIME_STEPS; t += TIME_STEP)
 	{
@@ -204,6 +210,9 @@ int main(int argc, char *argv[])
 		{
 			// Inner particle loop
 			VT_enter(symdef_step_particle_inner, VT_NOSCL);
+
+			int collision = 0;
+
 			// Checks only the lower part of the
 			// (sd->current)^2 matrix (from po and down)
 			for(int pi = po+1; pi < sd->current; pi++)
@@ -213,10 +222,13 @@ int main(int argc, char *argv[])
 				{
 					interact(&particles[po], &particles[pi], collision);
 					// Don't do further collision checks to cut calculations
+					collision = 1;
 					break;
-				}else{
-					feuler(&particles[po], TIME_STEP);
 				}
+			}
+
+			if(!collision){
+				feuler(&particles[po], TIME_STEP);
 			}
 			VT_end(0);
 
@@ -270,9 +282,20 @@ int main(int argc, char *argv[])
 			MPI_Isend(particlesSendUp, sd->sendingUp, MPI_COORDINATE, sliceAbove, TAG_SEND_UP, MPI_COMM_WORLD, & request);
 		}
 
-		// Let all send if they need to, as it's async
+		VT_enter(symdef_step_send_down, VT_NOSCL);
+		// Send down, but only if there's something to send
+		if(!isLastSlice && sd->sendingDown != 0)
+		{
+			MPI_Request request;
+			MPI_Isend(particlesSendDown, sd->sendingDown, MPI_COORDINATE, sliceBelow, TAG_SEND_DOWN, MPI_COMM_WORLD, & request);
+		}
+		VT_end(0);
+
+		// All sends done, then check the receive buffers
 		MPI_Barrier(MPI_COMM_WORLD);
 
+		VT_enter(symdef_step_recv, VT_NOSCL);
+		VT_enter(symdef_step_recv_up, VT_NOSCL);
 		// Receive from below, but only if there's something to receive
 		if(!isLastSlice){
 			int flag;
@@ -296,17 +319,7 @@ int main(int argc, char *argv[])
 		}
 		VT_end(0);
 
-		VT_enter(symdef_step_send_down, VT_NOSCL);
-		// Send down, but only if there's something to send
-		if(!isLastSlice && sd->sendingDown != 0)
-		{
-			MPI_Request request;
-			MPI_Isend(particlesSendDown, sd->sendingDown, MPI_COORDINATE, sliceBelow, TAG_SEND_DOWN, MPI_COMM_WORLD, & request);
-		}
-
-		// Let all send if they need to, as it's async
-		MPI_Barrier(MPI_COMM_WORLD);
-
+		VT_enter(symdef_step_recv_down, VT_NOSCL);
 		// Receive from above, but only if there's something to receive
 		if(!isFirstSlice){
 			int flag;
@@ -378,7 +391,7 @@ int main(int argc, char *argv[])
 				totalPressure += sliceData[i].pressure;
 			}
 			averagePressure = (totalPressure / (WALL_LENGTH * TIME_STEPS));
-			printf("Calculated pressure to be %.5f in a box with size %.1f by %.1f over %d time steps with %d particles.\n", averagePressure, BOX_HORIZ_SIZE, BOX_VERT_SIZE, TIME_STEPS, INIT_NO_PARTICLES*np);
+			printf("Calculated pressure to be %.5f (%e) in a box with size %.1f by %.1f over %d time steps with %d particles.\n", averagePressure, averagePressure, BOX_HORIZ_SIZE, BOX_VERT_SIZE, TIME_STEPS, INIT_NO_PARTICLES*np);
 		}
 	}
 	MPI_Finalize();
