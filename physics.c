@@ -187,7 +187,12 @@ void interact(pcord_t *p1,pcord_t *p2, float t){
 
 double rand01()
 {
-	return ((double)rand()/((double)(RAND_MAX)+(double)(1)));
+	//   rand()
+	// ----------
+	// RAND_MAX+1
+	return ((double)rand()
+		/
+		((double)(RAND_MAX) + (double)(1)));
 }
 
 void printParticles(int msglevel, int count, pcord_t particles[], int rank, const char * name){
