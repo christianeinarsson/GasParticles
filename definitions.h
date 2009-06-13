@@ -39,6 +39,7 @@ struct slice_data {
 	unsigned int sendingDown;
 	unsigned int wallCollisions;
 	float pressure;
+	double timing;
 };
 
 typedef struct slice_data slice_data_t;

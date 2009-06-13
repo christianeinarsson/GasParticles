@@ -8,7 +8,7 @@ help_build()
   echo "Usage: build [-n y] [-N x]"
   echo "Options: These are optional argument"
   echo " -n initial number of particles in a node (default 500)"
-  echo " -N maximum number of particles in a node (default 5*n)"
+  echo " -N maximum number of particles in a node (default 2*n)"
   exit 1
 }
 
@@ -16,7 +16,7 @@ help_build()
 # Set default value for variable
 
 n=500
-N=`expr $n \* 5`
+N=`expr $n \* 2`
 
 # if no argument
 if [ $# -lt 1 ]; then

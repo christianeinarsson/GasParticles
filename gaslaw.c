@@ -76,9 +76,9 @@ int main(int argc, char *argv[])
 		// MPI commiting type slice_data_t
 		{
 			slice_data_t slice_data_t_item; // Element of the type
-			int slice_data_t_block_lengths[] = { 1, 1, 1, 1, 1, 1 }; // Set lengths of type elements
-			MPI_Datatype slice_data_t_block_types[] = { MPI_UNSIGNED, MPI_UNSIGNED, MPI_UNSIGNED, MPI_UNSIGNED, MPI_UNSIGNED, MPI_FLOAT }; // Set types
-			MPI_Aint slice_data_t_start, slice_data_t_displ[6];
+			int slice_data_t_block_lengths[] = { 1, 1, 1, 1, 1, 1, 1 }; // Set lengths of type elements
+			MPI_Datatype slice_data_t_block_types[] = { MPI_UNSIGNED, MPI_UNSIGNED, MPI_UNSIGNED, MPI_UNSIGNED, MPI_UNSIGNED, MPI_FLOAT, MPI_DOUBLE }; // Set types
+			MPI_Aint slice_data_t_start, slice_data_t_displ[7];
 			MPI_Address(& slice_data_t_item, & slice_data_t_start);
 			MPI_Address(& slice_data_t_item.current, & slice_data_t_displ[0]);
 			MPI_Address(& slice_data_t_item.keeping, & slice_data_t_displ[1]);
@@ -86,13 +86,15 @@ int main(int argc, char *argv[])
 			MPI_Address(& slice_data_t_item.sendingDown, & slice_data_t_displ[3]);
 			MPI_Address(& slice_data_t_item.wallCollisions, & slice_data_t_displ[4]);
 			MPI_Address(& slice_data_t_item.pressure, & slice_data_t_displ[5]);
+			MPI_Address(& slice_data_t_item.timing, & slice_data_t_displ[6]);
 			slice_data_t_displ[0] -= slice_data_t_start; // Displacement relative to address of start
 			slice_data_t_displ[1] -= slice_data_t_start; // Displacement relative to address of start
 			slice_data_t_displ[2] -= slice_data_t_start; // Displacement relative to address of start
 			slice_data_t_displ[3] -= slice_data_t_start; // Displacement relative to address of start
 			slice_data_t_displ[4] -= slice_data_t_start; // Displacement relative to address of start
 			slice_data_t_displ[5] -= slice_data_t_start; // Displacement relative to address of start
-			MPI_Type_create_struct(6, slice_data_t_block_lengths, slice_data_t_displ, slice_data_t_block_types, & MPI_SLICE_DATA);
+			slice_data_t_displ[6] -= slice_data_t_start; // Displacement relative to address of start
+			MPI_Type_create_struct(7, slice_data_t_block_lengths, slice_data_t_displ, slice_data_t_block_types, & MPI_SLICE_DATA);
 			MPI_Type_commit(& MPI_SLICE_DATA);
 		}
 	}
@@ -139,6 +141,7 @@ int main(int argc, char *argv[])
 		sd->sendingDown = 0;
 		sd->wallCollisions = 0;
 		sd->pressure = 0.0;
+		sd->timing = 0.0;
 
 		// The functions start at the same time
 		// Multiplier as spacing to make sure time doesn't
@@ -168,8 +171,6 @@ int main(int argc, char *argv[])
 	pmesg(90, "%3d\t%4d\t%4d\t%4d\t%4d\t%4.04f\t\t%4d\n", me, sliceData[me].current, sliceData[me].keeping, sliceData[me].sendingUp, sliceData[me].sendingDown, sliceData[me].pressure, sliceData[me].wallCollisions);
 	MPI_Barrier(MPI_COMM_WORLD);
 
-	if(isMaster) pmesg(97, "Main loop: for each time-step do\n");
-
 	// Vampir Trace code grouping
 	int symdef_step;
 	int symdef_step_outer;
@@ -182,7 +183,7 @@ int main(int argc, char *argv[])
 	int symdef_step_recv_up;
 	int symdef_step_recv_down;
 	int * counters;
-	long long lnglngCounterHit = (long long) 1;
+	long long lnglngCounterHit = 0;
 	{
 		VT_funcdef("Step", VT_NOCLASS, &symdef_step);
 		VT_funcdef("Step:Particle", VT_NOCLASS, &symdef_step_outer);
@@ -215,8 +216,11 @@ int main(int argc, char *argv[])
 	}
 	VT_end(0); // Init
 
-	// TODO: MPI_Wtime?
+	// Basic timing
+	double starttime, endtime;
+	starttime = MPI_Wtime();
 
+	if(isMaster) pmesg(97, "Main loop: for each time-step do\n");
 	for(int t = 0; t < TIME_STEPS; t += TIME_STEP)
 	{
 		VT_enter(symdef_step, VT_NOSCL);
@@ -244,6 +248,7 @@ int main(int argc, char *argv[])
 				{
 					interact(&particles[po], &particles[pi], collision);
 
+					lnglngCounterHit++;
 					VT_countval (1, & counters[4], & lnglngCounterHit);
 
 					// Don't do further collision checks to cut calculations
@@ -380,6 +385,8 @@ int main(int argc, char *argv[])
 		swap(pcord_t *, particles, particlesKeep);
 		VT_end(0); // Step
 	}
+	endtime = MPI_Wtime();
+	sd->timing = endtime - starttime;
 
 	// Swap back so that numbers look correct for the stats
 	swap(int, sd->current, sd->keeping);
@@ -397,21 +404,23 @@ int main(int argc, char *argv[])
 		sums.sendingDown = 0;
 		sums.pressure = 0;
 		sums.wallCollisions = 0;
+		sums.timing = 0;
 
 		pmesg(40, "Slice data when done\n");
-		printf("ID \tCURR  \tKEEP  \tUP    \tDOWN  \tPRESSURE    \tWCOL\n");
+		printf("ID \tCURR  \tKEEP  \tUP    \tDOWN  \tPRESSURE    \tWCOLLI\tTIMING\n");
 		for(int i = 0; i < np; i++){
-			printf("%3d\t%6d\t%6d\t%6d\t%6d\t%12.04f\t%6d\n", i, sliceData[i].current, sliceData[i].keeping, sliceData[i].sendingUp, sliceData[i].sendingDown, sliceData[i].pressure, sliceData[i].wallCollisions);
-			sums.current+=sliceData[i].current;
-			sums.keeping+=sliceData[i].keeping;
-			sums.sendingUp+=sliceData[i].sendingUp;
-			sums.sendingDown+=sliceData[i].sendingDown;
-			sums.pressure+=sliceData[i].pressure;
-			sums.wallCollisions+=sliceData[i].wallCollisions;
+			printf("%3d\t%6d\t%6d\t%6d\t%6d\t%12.04f\t%6d\t%5.03f\n", i, sliceData[i].current, sliceData[i].keeping, sliceData[i].sendingUp, sliceData[i].sendingDown, sliceData[i].pressure, sliceData[i].wallCollisions, sliceData[i].timing);
+			sums.current += sliceData[i].current;
+			sums.keeping += sliceData[i].keeping;
+			sums.sendingUp += sliceData[i].sendingUp;
+			sums.sendingDown += sliceData[i].sendingDown;
+			sums.pressure += sliceData[i].pressure;
+			sums.wallCollisions += sliceData[i].wallCollisions;
+			sums.timing += sliceData[i].timing;
 		}
-		printf("---\t------\t------\t------\t------\t------------\t------\n");
-		printf("%3d\t%6d\t%6d\t%6d\t%6d\t%12.04f\t%6d\n", np, sums.current, sums.keeping, sums.sendingUp, sums.sendingDown, sums.pressure, sums.wallCollisions);
-		printf("   \t%6d\t%6d\t%6d\t%6d\t%12.04f\t%6d\n", sums.current/np, sums.keeping/np, sums.sendingUp/np, sums.sendingDown/np, sums.pressure/np, sums.wallCollisions/np);
+		printf("---\t------\t------\t------\t------\t------------\t------\t------\n");
+		printf("SUM\t%6d\t%6d\t%6d\t%6d\t%12.04f\t%6d\t%5.03f\n", sums.current, sums.keeping, sums.sendingUp, sums.sendingDown, sums.pressure, sums.wallCollisions, sums.timing);
+		printf("AVG\t%6d\t%6d\t%6d\t%6d\t%12.04f\t%6d\t%5.03f\n", sums.current/np, sums.keeping/np, sums.sendingUp/np, sums.sendingDown/np, sums.pressure/np, sums.wallCollisions/np, sums.timing/np);
 
 		pmesg(70, "Calculate pressure\n");
 		{

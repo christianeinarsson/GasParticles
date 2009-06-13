@@ -3,10 +3,10 @@
 
 ### Start main procedure
 
-for n in 500 1000 2000 4000 8000
+for n in 500 1000 2000 4000 8000 16000
 do
-	N=`expr $n \* 5`
-	if [ $1 = "-b" ]
+	N=`expr $n \* 2`
+	if [ "$1" == "-b" ]
 	then
 		./build.sh -n $n -N $N
 	else
