@@ -53,7 +53,7 @@ float wall_collide_top(pcord_t *p, cord_t wall, unsigned int * counter){
 	if(p->y < wall.y0){
 		p->vy = -p->vy;
 		p->y  = wall.y0 + (wall.y0-p->y);
-		counter++;
+		(*counter)++;
 		return 2.0*fabs(p->vy);
 	}
 	return 0.0;
@@ -63,7 +63,7 @@ float wall_collide_bottom(pcord_t *p, cord_t wall, unsigned int * counter){
 	if(p->y > wall.y1){
 		p->vy = -p->vy;
 		p->y  = wall.y1 - (p->y-wall.y1);
-		counter++;
+		(*counter)++;
 		return 2.0*fabs(p->vy);
 	}
 	return 0.0;
@@ -74,13 +74,13 @@ float wall_collide_leftright(pcord_t *p, cord_t wall, unsigned int * counter){
 	if(p->x < wall.x0){
 		p->vx = -p->vx;
 		p->x  = wall.x0 + (wall.x0-p->x);
-		counter++;
+		(*counter)++;
 		return 2.0*fabs(p->vx);
 	}
 	else if(p->x > wall.x1){
 		p->vx = -p->vx;
 		p->x  = wall.x1 - (p->x-wall.x1);
-		counter++;
+		(*counter)++;
 		return 2.0*fabs(p->vx);
 	}
 	return 0.0;
