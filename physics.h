@@ -10,9 +10,9 @@ int feuler(pcord_t *a,
 
 float wall_collide(pcord_t *p, cord_t wall);
 
-float wall_collide_top(pcord_t *p, cord_t wall, unsigned int * counter);
-float wall_collide_bottom(pcord_t *p, cord_t wall, unsigned int * counter);
-float wall_collide_leftright(pcord_t *p, cord_t wall, unsigned int * counter);
+float wall_collide_top(pcord_t *p, cord_t wall, unsigned int * counter, int * counters);
+float wall_collide_bottom(pcord_t *p, cord_t wall, unsigned int * counter, int * counters);
+float wall_collide_leftright(pcord_t *p, cord_t wall, unsigned int * counter, int * counters);
 int particle_escape_top(pcord_t *p, cord_t limits);
 int particle_escape_bottom(pcord_t *p, cord_t limits);
 

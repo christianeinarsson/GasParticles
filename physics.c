@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <VT.h>
 #include "physics.h"
 #include "debug.h"
 
@@ -49,38 +50,46 @@ float wall_collide(pcord_t *p, cord_t wall){
 	return gPressure;
 }
 
-float wall_collide_top(pcord_t *p, cord_t wall, unsigned int * counter){
+float wall_collide_top(pcord_t *p, cord_t wall, unsigned int * counter, int * counters){
 	if(p->y < wall.y0){
 		p->vy = -p->vy;
 		p->y  = wall.y0 + (wall.y0-p->y);
-		(*counter)++;
+		(* counter)++;
+		long long lnglngCounter = (long long) (* counter);
+		VT_countval (1, & counters[0], & lnglngCounter);
 		return 2.0*fabs(p->vy);
 	}
 	return 0.0;
 }
 
-float wall_collide_bottom(pcord_t *p, cord_t wall, unsigned int * counter){
+float wall_collide_bottom(pcord_t *p, cord_t wall, unsigned int * counter, int * counters){
 	if(p->y > wall.y1){
 		p->vy = -p->vy;
 		p->y  = wall.y1 - (p->y-wall.y1);
-		(*counter)++;
+		(* counter)++;
+		long long lnglngCounter = (long long) (* counter);
+		VT_countval(1, & counters[1], & lnglngCounter);
 		return 2.0*fabs(p->vy);
 	}
 	return 0.0;
 }
-float wall_collide_leftright(pcord_t *p, cord_t wall, unsigned int * counter){
+float wall_collide_leftright(pcord_t *p, cord_t wall, unsigned int * counter, int * counters){
 	// Assumption: if colliding to the left wall, it
 	// can't collide to the right wall too
 	if(p->x < wall.x0){
 		p->vx = -p->vx;
 		p->x  = wall.x0 + (wall.x0-p->x);
-		(*counter)++;
+		(* counter)++;
+		long long lnglngCounter = (long long) (* counter);
+		VT_countval(1, & counters[2], & lnglngCounter);
 		return 2.0*fabs(p->vx);
 	}
 	else if(p->x > wall.x1){
 		p->vx = -p->vx;
 		p->x  = wall.x1 - (p->x-wall.x1);
-		(*counter)++;
+		(* counter)++;
+		long long lnglngCounter = (long long) (* counter);
+		VT_countval(1, & counters[3], & lnglngCounter);
 		return 2.0*fabs(p->vx);
 	}
 	return 0.0;

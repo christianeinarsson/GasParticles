@@ -5,6 +5,8 @@
 #include <time.h>
 #include <string.h>
 #include <VT.h>
+#include <limits.h>
+#include <float.h>
 #include "definitions.h"
 #include "debug.h"
 
@@ -13,9 +15,9 @@ int msglevel = 60;
 int main(int argc, char *argv[])
 {
 	VT_initialize(&argc, &argv);
-	int func_statehandle;
-	int class_statehandle;
-	VT_enter(VT_funcdef("main", VT_classdef("GasLaw", &func_statehandle), &class_statehandle), VT_NOSCL);
+	int symdef_main;
+	VT_funcdef("Main", VT_NOCLASS, &symdef_main);
+	VT_enter(symdef_main, VT_NOSCL);
 
 	int symdef_init;
 	VT_funcdef("Init", VT_NOCLASS, &symdef_init);
@@ -43,7 +45,6 @@ int main(int argc, char *argv[])
 		{
 			fprintf(stderr, "Just %d MPI nodes is too few - need at least three.\n", np);
 			MPI_Finalize();
-			VT_leave(VT_NOSCL);
 			VT_finalize();
 			exit(1);
 		}
@@ -166,33 +167,55 @@ int main(int argc, char *argv[])
 	MPI_Barrier(MPI_COMM_WORLD);
 	pmesg(90, "%3d\t%4d\t%4d\t%4d\t%4d\t%4.04f\t\t%4d\n", me, sliceData[me].current, sliceData[me].keeping, sliceData[me].sendingUp, sliceData[me].sendingDown, sliceData[me].pressure, sliceData[me].wallCollisions);
 	MPI_Barrier(MPI_COMM_WORLD);
-	VT_end(0);
 
-	int symdef_loop;
-	VT_funcdef("Loop", VT_NOCLASS, &symdef_loop);
-	VT_enter(symdef_loop, VT_NOSCL);
 	if(isMaster) pmesg(97, "Main loop: for each time-step do\n");
 
+	// Vampir Trace code grouping
 	int symdef_step;
-	VT_funcdef("Step", VT_NOCLASS, &symdef_step);
 	int symdef_step_outer;
-	VT_funcdef("Step:Particle", VT_NOCLASS, &symdef_step_outer);
 	int symdef_step_particle_inner;
-	VT_funcdef("Step:Particle:Inner", VT_NOCLASS, &symdef_step_particle_inner);
 	int symdef_particle_walls;
-	VT_funcdef("Step:Particle:Walls", VT_NOCLASS, &symdef_particle_walls);
 	int symdef_step_send;
-	VT_funcdef("Step:Send", VT_NOCLASS, &symdef_step_send);
 	int symdef_step_send_up;
-	VT_funcdef("Step:Send:Up", VT_NOCLASS, &symdef_step_send_up);
 	int symdef_step_send_down;
-	VT_funcdef("Step:Send:Down", VT_NOCLASS, &symdef_step_send_down);
 	int symdef_step_recv;
-	VT_funcdef("Step:Recv", VT_NOCLASS, &symdef_step_send);
 	int symdef_step_recv_up;
-	VT_funcdef("Step:Recv:Up", VT_NOCLASS, &symdef_step_send_up);
 	int symdef_step_recv_down;
-	VT_funcdef("Step:Recv:Down", VT_NOCLASS, &symdef_step_send_down);
+	int * counters;
+	long long lnglngCounterHit = (long long) 1;
+	{
+		VT_funcdef("Step", VT_NOCLASS, &symdef_step);
+		VT_funcdef("Step:Particle", VT_NOCLASS, &symdef_step_outer);
+		VT_funcdef("Step:Particle:Inner", VT_NOCLASS, &symdef_step_particle_inner);
+		VT_funcdef("Step:Particle:Walls", VT_NOCLASS, &symdef_particle_walls);
+		VT_funcdef("Step:Send", VT_NOCLASS, &symdef_step_send);
+		VT_funcdef("Step:Send:Up", VT_NOCLASS, &symdef_step_send_up);
+		VT_funcdef("Step:Send:Down", VT_NOCLASS, &symdef_step_send_down);
+		VT_funcdef("Step:Recv", VT_NOCLASS, &symdef_step_recv);
+		VT_funcdef("Step:Recv:Up", VT_NOCLASS, &symdef_step_recv_up);
+		VT_funcdef("Step:Recv:Down", VT_NOCLASS, &symdef_step_recv_down);
+
+		counters = (int *) malloc(sizeof(int) * 6);
+		int * uintBounds = (int *) malloc(sizeof(int) * 2);
+		uintBounds[0] = 0;
+		uintBounds[1] = INT_MAX;
+		float * floatBounds = (float *) malloc(sizeof(float) * 2);
+		floatBounds[0] = 0.0;
+		floatBounds[1] = FLT_MAX;
+
+		int uintDataType = VT_COUNT_INTEGER64 | VT_COUNT_RATE | VT_COUNT_VALID_SAMPLE;
+		int floatDataType = VT_COUNT_FLOAT | VT_COUNT_ABSVAL | VT_COUNT_VALID_SAMPLE;
+
+		VT_countdef("Wall collisions up", VT_NOCLASS, uintDataType, VT_ME, uintBounds, "hits", & counters[0]);
+		VT_countdef("Wall collisions down", VT_NOCLASS, uintDataType, VT_ME, uintBounds, "hits", & counters[1]);
+		VT_countdef("Wall collisions left", VT_NOCLASS, uintDataType, VT_ME, uintBounds, "hits", & counters[2]);
+		VT_countdef("Wall collisions right", VT_NOCLASS, uintDataType, VT_ME, uintBounds, "hits", & counters[3]);
+		VT_countdef("Particle collisions", VT_NOCLASS, uintDataType, VT_ME, uintBounds, "hits", & counters[4]);
+		VT_countdef("Pressure", VT_NOCLASS, floatDataType, VT_ME, floatBounds, "unit", & counters[5]);
+	}
+	VT_end(0); // Init
+
+	// TODO: MPI_Wtime?
 
 	for(int t = 0; t < TIME_STEPS; t += TIME_STEP)
 	{
@@ -208,11 +231,10 @@ int main(int argc, char *argv[])
 		VT_enter(symdef_step_outer, VT_NOSCL);
 		for(int po = 0; po < sd->current; po++)
 		{
-			// Inner particle loop
-			VT_enter(symdef_step_particle_inner, VT_NOSCL);
-
 			int collision = 0;
 
+			// Inner particle loop
+			VT_enter(symdef_step_particle_inner, VT_NOSCL);
 			// Checks only the lower part of the
 			// (sd->current)^2 matrix (from po and down)
 			for(int pi = po+1; pi < sd->current; pi++)
@@ -221,29 +243,32 @@ int main(int argc, char *argv[])
 				if(collision != -1)
 				{
 					interact(&particles[po], &particles[pi], collision);
+
+					VT_countval (1, & counters[4], & lnglngCounterHit);
+
 					// Don't do further collision checks to cut calculations
 					collision = 1;
 					break;
 				}
 			}
+			VT_end(0); // Inner
 
 			if(!collision){
 				feuler(&particles[po], TIME_STEP);
 			}
-			VT_end(0);
 
 			// Collisions
 			VT_enter(symdef_particle_walls, VT_NOSCL);
 			// Check left and right wall collisions
 			// Done first, they may bounce out of slice bounds
-			sd->pressure += wall_collide_leftright(&particles[po], walls, &sd->wallCollisions);
+			sd->pressure += wall_collide_leftright(&particles[po], walls, &sd->wallCollisions, counters);
 
 			// Check top wall collisions only for the first slice
 			// otherwise check for escaping particles
 			int escaped = 0;
 			if(isFirstSlice)
 			{
-				sd->pressure += wall_collide_top(&particles[po], walls, &sd->wallCollisions);
+				sd->pressure += wall_collide_top(&particles[po], walls, &sd->wallCollisions, counters);
 			}
 			else if(particle_escape_top(&particles[po], slice))
 			{
@@ -256,7 +281,7 @@ int main(int argc, char *argv[])
 			// otherwise check for escaping particles
 			if(isLastSlice)
 			{
-				sd->pressure += wall_collide_bottom(&particles[po], walls, &sd->wallCollisions);
+				sd->pressure += wall_collide_bottom(&particles[po], walls, &sd->wallCollisions, counters);
 			}
 			else if(particle_escape_bottom(&particles[po], slice))
 			{
@@ -270,8 +295,12 @@ int main(int argc, char *argv[])
 				particlesKeep[sd->keeping] = particles[po];
 				sd->keeping++;
 			}
-			VT_end(0);
+
+			double dblPressure = (double) sd->pressure;
+			VT_countval(1, & counters[5], & dblPressure);
+			VT_end(0); // Walls
 		}
+		VT_end(0); // Outer
 
 		VT_enter(symdef_step_send, VT_NOSCL);
 		VT_enter(symdef_step_send_up, VT_NOSCL);
@@ -281,6 +310,7 @@ int main(int argc, char *argv[])
 			MPI_Request request;
 			MPI_Isend(particlesSendUp, sd->sendingUp, MPI_COORDINATE, sliceAbove, TAG_SEND_UP, MPI_COMM_WORLD, & request);
 		}
+		VT_end(0); // Send up
 
 		VT_enter(symdef_step_send_down, VT_NOSCL);
 		// Send down, but only if there's something to send
@@ -289,7 +319,8 @@ int main(int argc, char *argv[])
 			MPI_Request request;
 			MPI_Isend(particlesSendDown, sd->sendingDown, MPI_COORDINATE, sliceBelow, TAG_SEND_DOWN, MPI_COMM_WORLD, & request);
 		}
-		VT_end(0);
+		VT_end(0); // Send down
+		VT_end(0); // Send
 
 		// All sends done, then check the receive buffers
 		MPI_Barrier(MPI_COMM_WORLD);
@@ -317,7 +348,7 @@ int main(int argc, char *argv[])
 				}
 			}
 		}
-		VT_end(0);
+		VT_end(0); // Recv up
 
 		VT_enter(symdef_step_recv_down, VT_NOSCL);
 		// Receive from above, but only if there's something to receive
@@ -341,15 +372,14 @@ int main(int argc, char *argv[])
 				}
 			}
 		}
-		VT_end(0);
-		VT_end(0);
+		VT_end(0); // Recv down
+		VT_end(0); // Recv
 
 		// Use the kept particles for the next iteration
 		swap(int, sd->current, sd->keeping);
 		swap(pcord_t *, particles, particlesKeep);
-		VT_end(0);
+		VT_end(0); // Step
 	}
-	VT_end(0);
 
 	// Swap back so that numbers look correct for the stats
 	swap(int, sd->current, sd->keeping);
@@ -395,6 +425,7 @@ int main(int argc, char *argv[])
 		}
 	}
 	MPI_Finalize();
-	VT_leave(VT_NOSCL);
+	VT_end(0); // Main
+	//VT_leave(VT_NOSCL);
 	VT_finalize();
 }
