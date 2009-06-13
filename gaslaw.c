@@ -4,6 +4,7 @@
 #include <mpi.h>
 #include <time.h>
 #include <string.h>
+#include <VT.h>
 #include "definitions.h"
 #include "debug.h"
 
@@ -11,6 +12,15 @@ int msglevel = 60;
 
 int main(int argc, char *argv[])
 {
+	VT_initialize(&argc, &argv);
+	int func_statehandle;
+	int class_statehandle;
+	VT_enter(VT_funcdef("main", VT_classdef("GasLaw", &func_statehandle), &class_statehandle), VT_NOSCL);
+
+	int symdef_init;
+	VT_funcdef("Init", VT_NOCLASS, &symdef_init);
+	VT_enter(symdef_init, VT_NOSCL);
+
 	int np;
 	int me;
 	{
@@ -33,6 +43,8 @@ int main(int argc, char *argv[])
 		{
 			fprintf(stderr, "Just %d MPI nodes is too few - need at least three.\n", np);
 			MPI_Finalize();
+			VT_leave(VT_NOSCL);
+			VT_finalize();
 			exit(1);
 		}
 	}
@@ -84,34 +96,36 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	if(isMaster) pmesg(97, "Initiate walls\n");
+	cord_t walls;
+	{
+		walls.x0 = 0.0;
+		walls.x1 = BOX_HORIZ_SIZE;
+		walls.y0 = 0.0;
+		walls.y1 = BOX_VERT_SIZE;
+	}
+
 	if(isMaster) pmesg(97, "Divide rectangle into horizontal slices\n");
 	cord_t slice;
 	{
-		slice.x0 = 0;
+		slice.x0 = 0.0;
 		slice.x1 = BOX_HORIZ_SIZE;
 		slice.y0 = me * (BOX_VERT_SIZE / np);
 		slice.y1 = (me + 1) * (BOX_VERT_SIZE / np);
 	}
 
-	if(isMaster) pmesg(97, "Initiate walls\n");
-	cord_t walls;
-	{
-		walls.x0 = 0;
-		walls.x1 = BOX_HORIZ_SIZE;
-		walls.y0 = 0;
-		walls.y1 = BOX_VERT_SIZE;
-	}
-
 	if(isMaster) pmesg(97, "Initiate particles\n");
 	pcord_t * particles;
-	pcord_t * particlesNext;
+	pcord_t * particlesKeep;
 	pcord_t * particlesSendUp;
 	pcord_t * particlesSendDown;
 	slice_data_t * sliceData;
 	slice_data_t * sd;
 	{
+		// Assuming that there is a statistical chance that ALL particles
+		// either go up, down or stay
 		particles = (pcord_t *) malloc(sizeof(pcord_t) * MAX_NO_PARTICLES);
-		particlesNext = (pcord_t *) malloc(sizeof(pcord_t) * MAX_NO_PARTICLES);
+		particlesKeep = (pcord_t *) malloc(sizeof(pcord_t) * MAX_NO_PARTICLES);
 		particlesSendUp = (pcord_t *) malloc(sizeof(pcord_t) * MAX_NO_PARTICLES);
 		particlesSendDown = (pcord_t *) malloc(sizeof(pcord_t) * MAX_NO_PARTICLES);
 
@@ -128,7 +142,7 @@ int main(int argc, char *argv[])
 		// The functions start at the same time
 		// Multiplier as spacing to make sure time doesn't
 		// tick and gives me and me+1 the same value
-		srand(time(NULL) + (me * 1024));
+		srand(time(NULL) + (me * 3571));
 		for(int p = 0; p < sd->current; p++)
 		{
 			particles[p].x = slice.x0 + (rand01() * (slice.x1 - slice.x0));
@@ -152,10 +166,17 @@ int main(int argc, char *argv[])
 	MPI_Barrier(MPI_COMM_WORLD);
 	pmesg(90, "%3d\t%4d\t%4d\t%4d\t%4d\t%4.04f\t\t%4d\n", me, sliceData[me].current, sliceData[me].keeping, sliceData[me].sendingUp, sliceData[me].sendingDown, sliceData[me].pressure, sliceData[me].wallCollisions);
 	MPI_Barrier(MPI_COMM_WORLD);
+	VT_end(0);
 
+	int symdef_loop;
+	VT_funcdef("Loop", VT_NOCLASS, &symdef_loop);
+	VT_enter(symdef_loop, VT_NOSCL);
 	if(isMaster) pmesg(97, "Main loop: for each time-step do\n");
 	for(int t = 0; t < TIME_STEPS; t += TIME_STEP)
 	{
+		int symdef_step;
+		VT_funcdef("Step", VT_NOCLASS, &symdef_step);
+		VT_enter(symdef_step, VT_NOSCL);
 		MPI_Barrier(MPI_COMM_WORLD);
 		if(isMaster) pmesg(75, "Time is %d\n", t);
 
@@ -164,11 +185,15 @@ int main(int argc, char *argv[])
 		sd->sendingDown = 0;
 
 		// Outer particle loop
+		int symdef_step_outer;
+		VT_funcdef("Step:Particle", VT_NOCLASS, &symdef_step_outer);
+		VT_enter(symdef_step_outer, VT_NOSCL);
 		for(int po = 0; po < sd->current; po++)
 		{
-			float pressure;
-
 			// Inner particle loop
+			int symdef_step_particle_inner;
+			VT_funcdef("Step:Particle:Inner", VT_NOCLASS, &symdef_step_particle_inner);
+			VT_enter(symdef_step_particle_inner, VT_NOSCL);
 			// Checks only the lower part of the
 			// (sd->current)^2 matrix (from po and down)
 			for(int pi = po+1; pi < sd->current; pi++)
@@ -183,27 +208,22 @@ int main(int argc, char *argv[])
 					feuler(&particles[po], TIME_STEP);
 				}
 			}
+			VT_end(0);
 
+			// Collisions
+			int symdef_particle_walls;
+			VT_funcdef("Step:Particle:Walls", VT_NOCLASS, &symdef_particle_walls);
+			VT_enter(symdef_particle_walls, VT_NOSCL);
 			// Check left and right wall collisions
 			// Done first, they may bounce out of slice bounds
-			pressure = wall_collide_leftright(&particles[po], walls);
-			if(pressure !=  0.0)
-			{
-				sd->pressure += pressure;
-				sd->wallCollisions++;
-			}
+			sd->pressure += wall_collide_leftright(&particles[po], walls, &sd->wallCollisions);
 
 			// Check top wall collisions only for the first slice
 			// otherwise check for escaping particles
 			int escaped = 0;
 			if(isFirstSlice)
 			{
-				pressure = wall_collide_top(&particles[po], walls);
-				if(pressure !=  0.0)
-				{
-					sd->pressure += pressure;
-					sd->wallCollisions++;
-				}
+				sd->pressure += wall_collide_top(&particles[po], walls, &sd->wallCollisions);
 			}
 			else if(particle_escape_top(&particles[po], slice))
 			{
@@ -216,12 +236,7 @@ int main(int argc, char *argv[])
 			// otherwise check for escaping particles
 			if(isLastSlice)
 			{
-				pressure = wall_collide_bottom(&particles[po], walls);
-				if(pressure !=  0.0)
-				{
-					sd->pressure += pressure;
-					sd->wallCollisions++;
-				}
+				sd->pressure += wall_collide_bottom(&particles[po], walls, &sd->wallCollisions);
 			}
 			else if(particle_escape_bottom(&particles[po], slice))
 			{
@@ -232,9 +247,10 @@ int main(int argc, char *argv[])
 
 			if(escaped == 0)
 			{
-				particlesNext[sd->keeping] = particles[po];
+				particlesKeep[sd->keeping] = particles[po];
 				sd->keeping++;
 			}
+			VT_end(0);
 		}
 
 		// All processors knows all the other data
@@ -242,6 +258,12 @@ int main(int argc, char *argv[])
 		// TODO: Even better, use MPI_Isend and MPI_Probe
 		MPI_Allgather(sd, 1, MPI_SLICE_DATA, sliceData, 1, MPI_SLICE_DATA, MPI_COMM_WORLD);
 
+		int symdef_step_send;
+		VT_funcdef("Step:Send", VT_NOCLASS, &symdef_step_send);
+		VT_enter(symdef_step_send, VT_NOSCL);
+		int symdef_step_send_up;
+		VT_funcdef("Step:Send:Up", VT_NOCLASS, &symdef_step_send_up);
+		VT_enter(symdef_step_send_up, VT_NOSCL);
 		// Send up, but only if there's something to send
 		if(!isFirstSlice && sd->sendingUp != 0)
 		{
@@ -251,27 +273,28 @@ int main(int argc, char *argv[])
 		// Receive from below, but only if there's something to receive
 		if(!isLastSlice && sliceData[sliceBelow].sendingUp != 0)
 		{
-			pcord_t * particlesReceive = (pcord_t *) malloc(sizeof(pcord_t) * sliceData[sliceBelow].sendingUp);
-
 			MPI_Status status;
 			// TODO: Add MPI_Probe first to get buffer size of incoming data
 			// http://www.mpi-forum.org/docs/mpi-11-html/node50.html#Node50
-			MPI_Recv(particlesReceive, sliceData[sliceBelow].sendingUp, MPI_COORDINATE, sliceBelow, TAG_SEND_UP, MPI_COMM_WORLD, &status);
+			MPI_Recv(particlesSendUp, sliceData[sliceBelow].sendingUp, MPI_COORDINATE, sliceBelow, TAG_SEND_UP, MPI_COMM_WORLD, &status);
 
 			// Insert sorted according to x position if possible?
 			// Would increase the chances of a collision with a neighbor
 			// and since collisions cut calculations, it would be efficient
 			for(int pr = 0; pr < sliceData[sliceBelow].sendingUp; pr++)
 			{
-				particlesNext[sd->keeping] = particlesSendUp[pr];
+				particlesKeep[sd->keeping] = particlesSendUp[pr];
 				sd->keeping++;
 			}
-			free(particlesReceive);
 		}
+		VT_end(0);
 
 		// TODO: Is this barrier needed? Might only need explicit sync once per time step
 		MPI_Barrier(MPI_COMM_WORLD);
 
+		int symdef_step_send_down;
+		VT_funcdef("Step:Send:Down", VT_NOCLASS, &symdef_step_send_down);
+		VT_enter(symdef_step_send_down, VT_NOSCL);
 		// Send down, but only if there's something to send
 		if(!isLastSlice && sd->sendingDown != 0)
 		{
@@ -291,19 +314,25 @@ int main(int argc, char *argv[])
 			// and since collisions cut calculations, it would be efficient
 			for(int pr = 0; pr < sliceData[sliceAbove].sendingDown; pr++)
 			{
-				particlesNext[sd->keeping] = particlesSendDown[pr];
+				particlesKeep[sd->keeping] = particlesSendDown[pr];
 				sd->keeping++;
 			}
-			//free(particlesReceive);
 		}
+		VT_end(0);
+		VT_end(0);
 
 		// TODO: Is this barrier needed? Might only need explicit sync once per time step
 		MPI_Barrier(MPI_COMM_WORLD);
 
 		// Use the kept particles for the next iteration
-		sd->current = sd->keeping;
-		swap(pcord_t *, particles, particlesNext);
+		swap(int, sd->current, sd->keeping);
+		swap(pcord_t *, particles, particlesKeep);
+		VT_end(0);
 	}
+	VT_end(0);
+
+	// Swap back so that numbers look correct for the stats
+	swap(int, sd->current, sd->keeping);
 
 	// One last gather to calculate total pressure
 	MPI_Gather(sd, 1, MPI_SLICE_DATA, sliceData, 1, MPI_SLICE_DATA, 0, MPI_COMM_WORLD);
@@ -312,9 +341,9 @@ int main(int argc, char *argv[])
 	if(isMaster)
 	{
 		pmesg(40, "Slice data when done\n");
-		pmesg(40, "ID\tCURR\tKEEP\tUP  \tDOWN\tPRESSURE\tWCOL\n");
+		printf("ID\tCURR\tKEEP\tUP  \tDOWN\tPRESSURE\tWCOL\n");
 		for(int i = 0; i < np; i++){
-			pmesg(40, "%3d\t%4d\t%4d\t%4d\t%4d\t%4.04f\t\t%4d\n", i, sliceData[i].current, sliceData[i].keeping, sliceData[i].sendingUp, sliceData[i].sendingDown, sliceData[i].pressure, sliceData[i].wallCollisions);
+			printf("%3d\t%4d\t%4d\t%4d\t%4d\t%4.04f\t\t%4d\n", i, sliceData[i].current, sliceData[i].keeping, sliceData[i].sendingUp, sliceData[i].sendingDown, sliceData[i].pressure, sliceData[i].wallCollisions);
 		}
 
 		pmesg(70, "Calculate pressure\n");
@@ -325,9 +354,11 @@ int main(int argc, char *argv[])
 				totalPressure += sliceData[i].pressure;
 			}
 			averagePressure = (totalPressure / (WALL_LENGTH * TIME_STEPS));
-			pmesg(0, "Calculated pressure to be %.5f in a box with size %.1f by %.1f over %d time steps with %d particles.\n", averagePressure, BOX_HORIZ_SIZE, BOX_VERT_SIZE, TIME_STEPS, INIT_NO_PARTICLES*np);
+			printf("Calculated pressure to be %.5f in a box with size %.1f by %.1f over %d time steps with %d particles.\n", averagePressure, BOX_HORIZ_SIZE, BOX_VERT_SIZE, TIME_STEPS, INIT_NO_PARTICLES*np);
 		}
 	}
 	MPI_Barrier(MPI_COMM_WORLD);
 	MPI_Finalize();
+	VT_leave(VT_NOSCL);
+	VT_finalize();
 }

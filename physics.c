@@ -19,66 +19,71 @@ int feuler(pcord_t *a, float time_step){
 }
 
 float wall_collide(pcord_t *p, cord_t wall){
-	float gPreassure = 0.0;
+	float gPressure = 0.0;
 
+	// Assumption: if colliding to the left wall, it
+	// can't collide to the right wall too
 	if(p->x < wall.x0){
 		p->vx = -p->vx;
 		p->x  = wall.x0 + (wall.x0-p->x);
-		gPreassure += 2.0*fabs(p->vx);
+		gPressure += 2.0*fabs(p->vx);
 	}
-	if(p->x > wall.x1){
+	else if(p->x > wall.x1){
 		p->vx = -p->vx;
 		p->x  = wall.x1 - (p->x-wall.x1);
-		gPreassure += 2.0*fabs(p->vx);
+		gPressure += 2.0*fabs(p->vx);
 	}
+
+	// Assumption: if colliding to the top wall, it
+	// can't collide to the bottom wall too
 	if(p->y < wall.y0){
 		p->vy = -p->vy;
 		p->y  = wall.y0 + (wall.y0-p->y);
-		gPreassure += 2.0*fabs(p->vy);
+		gPressure += 2.0*fabs(p->vy);
 	}
-	if(p->y > wall.y1){
+	else if(p->y > wall.y1){
 		p->vy = -p->vy;
 		p->y  = wall.y1 - (p->y-wall.y1);
-		gPreassure += 2.0*fabs(p->vy);
+		gPressure += 2.0*fabs(p->vy);
 	}
-	return gPreassure;
+	return gPressure;
 }
 
-float wall_collide_top(pcord_t *p, cord_t wall){
-	float gPreassure = 0.0;
-
+float wall_collide_top(pcord_t *p, cord_t wall, unsigned int * counter){
 	if(p->y < wall.y0){
 		p->vy = -p->vy;
 		p->y  = wall.y0 + (wall.y0-p->y);
-		gPreassure += 2.0*fabs(p->vy);
+		counter++;
+		return 2.0*fabs(p->vy);
 	}
-	return gPreassure;
+	return 0.0;
 }
 
-float wall_collide_bottom(pcord_t *p, cord_t wall){
-	float gPreassure = 0.0;
-
+float wall_collide_bottom(pcord_t *p, cord_t wall, unsigned int * counter){
 	if(p->y > wall.y1){
 		p->vy = -p->vy;
 		p->y  = wall.y1 - (p->y-wall.y1);
-		gPreassure += 2.0*fabs(p->vy);
+		counter++;
+		return 2.0*fabs(p->vy);
 	}
-	return gPreassure;
+	return 0.0;
 }
-float wall_collide_leftright(pcord_t *p, cord_t wall){
-	float gPreassure = 0.0;
-
+float wall_collide_leftright(pcord_t *p, cord_t wall, unsigned int * counter){
+	// Assumption: if colliding to the left wall, it
+	// can't collide to the right wall too
 	if(p->x < wall.x0){
 		p->vx = -p->vx;
 		p->x  = wall.x0 + (wall.x0-p->x);
-		gPreassure += 2.0*fabs(p->vx);
+		counter++;
+		return 2.0*fabs(p->vx);
 	}
-	if(p->x > wall.x1){
+	else if(p->x > wall.x1){
 		p->vx = -p->vx;
 		p->x  = wall.x1 - (p->x-wall.x1);
-		gPreassure += 2.0*fabs(p->vx);
+		counter++;
+		return 2.0*fabs(p->vx);
 	}
-	return gPreassure;
+	return 0.0;
 }
 
 int particle_escape_top(pcord_t *p, cord_t limits){
