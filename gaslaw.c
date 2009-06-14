@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
 	// Check preconditions
 	if(isMaster)
 	{
-		if(np < 3)
+		if(np < 2)
 		{
 			fprintf(stderr, "Just %d MPI nodes is too few - need at least three.\n", np);
 			MPI_Finalize();
