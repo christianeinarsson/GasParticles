@@ -113,25 +113,31 @@ float collide(pcord_t *p1, pcord_t *p2){
 	double temp,t1,t2;
 
 	a=sqr(p1->vx-p2->vx)+sqr(p1->vy-p2->vy);
-	b=2*((p1->x - p2->x)*(p1->vx - p2->vx)+(p1->y - p2->y)*(p1->vy - p2->vy));
-	c=sqr(p1->x-p2->x)+sqr(p1->y-p2->y)-4*1*1;
+	// Particles are 1 length unit in radius. If the distance
+	// between them is more than 2 they can't collide.
+	// This should be a sqrt(a) <= 2, but since a is positive
+	// and only a <= 4 gives sqrt(a) <= 2 this is better
+	if(a <= 4){
+		b=2*((p1->x - p2->x)*(p1->vx - p2->vx)+(p1->y - p2->y)*(p1->vy - p2->vy));
+		c=sqr(p1->x-p2->x)+sqr(p1->y-p2->y)-4*1*1;
 
-	if (a!=0.0){
-		temp=sqr(b)-4*a*c;
-		if (temp>=0){
-			temp=sqrt(temp);
-			t1=(-b+temp)/(2*a);
-			t2=(-b-temp)/(2*a);
+		if (a!=0.0){
+			temp=sqr(b)-4*a*c;
+			if (temp>=0){
+				temp=sqrt(temp);
+				t1=(-b+temp)/(2*a);
+				t2=(-b-temp)/(2*a);
 
-			if (t1>t2){
-				temp=t1;
-				t1=t2;
-				t2=temp;
+				if (t1>t2){
+					temp=t1;
+					t1=t2;
+					t2=temp;
+				}
+				if ((t1>=0)&(t1<=1))
+					return t1;
+				else if ((t2>=0)&(t2<=1))
+					return t2;
 			}
-			if ((t1>=0)&(t1<=1))
-				return t1;
-			else if ((t2>=0)&(t2<=1))
-				return t2;
 		}
 	}
 	return -1;
