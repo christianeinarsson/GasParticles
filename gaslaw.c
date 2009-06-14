@@ -51,50 +51,59 @@ int main(int argc, char *argv[])
 	}
 	MPI_Barrier(MPI_COMM_WORLD);
 
-	MPI_Datatype MPI_COORDINATE; // MPI type to commit
-	MPI_Datatype MPI_SLICE_DATA; // MPI type to commit
+	// MPI types to commit
+	MPI_Datatype MPI_COORDINATE;
+	MPI_Datatype MPI_SLICE_DATA;
 	{
 		// MPI commiting type particle
 		{
-			pcord_t pcord_t_item; // Element of the type
-			int pcord_t_block_lengths[] = { 1, 1, 1, 1 }; // Set lengths of type elements
-			MPI_Datatype pcord_t_block_types[] = { MPI_FLOAT, MPI_FLOAT, MPI_FLOAT, MPI_FLOAT }; // Set types
-			MPI_Aint pcord_t_start, pcord_t_displ[4];
-			MPI_Address(& pcord_t_item, & pcord_t_start);
-			MPI_Address(& pcord_t_item.x, & pcord_t_displ[0]);
-			MPI_Address(& pcord_t_item.y, & pcord_t_displ[1]);
-			MPI_Address(& pcord_t_item.vx, & pcord_t_displ[2]);
-			MPI_Address(& pcord_t_item.vy, & pcord_t_displ[3]);
-			pcord_t_displ[0] -= pcord_t_start; // Displacement relative to address of start
-			pcord_t_displ[1] -= pcord_t_start; // Displacement relative to address of start
-			pcord_t_displ[2] -= pcord_t_start; // Displacement relative to address of start
-			pcord_t_displ[3] -= pcord_t_start; // Displacement relative to address of start
-			MPI_Type_create_struct(4, pcord_t_block_lengths, pcord_t_displ, pcord_t_block_types, & MPI_COORDINATE);
+			// Element of the type
+			pcord_t item;
+			// Set lengths of type elements
+			int block_lengths[] = { 1, 1, 1, 1 };
+			// Set types
+			MPI_Datatype block_types[] = { MPI_FLOAT, MPI_FLOAT, MPI_FLOAT, MPI_FLOAT };
+			MPI_Aint start, displ[4];
+			MPI_Address(& item, & start);
+			MPI_Address(& item.x, & displ[0]);
+			MPI_Address(& item.y, & displ[1]);
+			MPI_Address(& item.vx, & displ[2]);
+			MPI_Address(& item.vy, & displ[3]);
+			// Displacement relative to address of start
+			displ[0] -= start;
+			displ[1] -= start;
+			displ[2] -= start;
+			displ[3] -= start;
+			MPI_Type_create_struct(4, block_lengths, displ, block_types, & MPI_COORDINATE);
 			MPI_Type_commit(& MPI_COORDINATE);
 		}
 
 		// MPI commiting type slice_data_t
 		{
-			slice_data_t slice_data_t_item; // Element of the type
-			int slice_data_t_block_lengths[] = { 1, 1, 1, 1, 1, 1, 1 }; // Set lengths of type elements
-			MPI_Datatype slice_data_t_block_types[] = { MPI_UNSIGNED, MPI_UNSIGNED, MPI_UNSIGNED, MPI_UNSIGNED, MPI_UNSIGNED, MPI_FLOAT, MPI_DOUBLE }; // Set types
-			MPI_Aint slice_data_t_start, slice_data_t_displ[7];
-			MPI_Address(& slice_data_t_item, & slice_data_t_start);
-			MPI_Address(& slice_data_t_item.current, & slice_data_t_displ[0]);
-			MPI_Address(& slice_data_t_item.keeping, & slice_data_t_displ[1]);
-			MPI_Address(& slice_data_t_item.sendingUp, & slice_data_t_displ[2]);
-			MPI_Address(& slice_data_t_item.sendingDown, & slice_data_t_displ[3]);
-			MPI_Address(& slice_data_t_item.wallCollisions, & slice_data_t_displ[4]);
-			MPI_Address(& slice_data_t_item.pressure, & slice_data_t_displ[5]);
-			MPI_Address(& slice_data_t_item.timing, & slice_data_t_displ[6]);
-			slice_data_t_displ[0] -= slice_data_t_start; // Displacement relative to address of start
-			slice_data_t_displ[1] -= slice_data_t_start; // Displacement relative to address of start
-			slice_data_t_displ[2] -= slice_data_t_start; // Displacement relative to address of start
-			slice_data_t_displ[3] -= slice_data_t_start; // Displacement relative to address of start
-			slice_data_t_displ[4] -= slice_data_t_start; // Displacement relative to address of start
-			slice_data_t_displ[5] -= slice_data_t_start; // Displacement relative to address of start
-			slice_data_t_displ[6] -= slice_data_t_start; // Displacement relative to address of start
-			MPI_Type_create_struct(7, slice_data_t_block_lengths, slice_data_t_displ, slice_data_t_block_types, & MPI_SLICE_DATA);
+			// Element of the type
+			slice_data_t item;
+			// Set lengths of type elements
+			int block_lengths[] = { 1, 1, 1, 1, 1, 1, 1 };
+			// Set types
+			MPI_Datatype block_types[] = { MPI_UNSIGNED, MPI_UNSIGNED, MPI_UNSIGNED, MPI_UNSIGNED, MPI_UNSIGNED, MPI_FLOAT, MPI_DOUBLE };
+			MPI_Aint start, displ[7];
+			MPI_Address(& item, & start);
+			MPI_Address(& item.current, & displ[0]);
+			MPI_Address(& item.keeping, & displ[1]);
+			MPI_Address(& item.sendingUp, & displ[2]);
+			MPI_Address(& item.sendingDown, & displ[3]);
+			MPI_Address(& item.wallCollisions, & displ[4]);
+			MPI_Address(& item.pressure, & displ[5]);
+			MPI_Address(& item.timing, & displ[6]);
+			// Displacement relative to address of start
+			displ[0] -= start;
+			displ[1] -= start;
+			displ[2] -= start;
+			displ[3] -= start;
+			displ[4] -= start;
+			displ[5] -= start;
+			displ[6] -= start;
+			MPI_Type_create_struct(7, block_lengths, displ, block_types, & MPI_SLICE_DATA);
 			MPI_Type_commit(& MPI_SLICE_DATA);
 		}
 	}
@@ -155,6 +164,15 @@ int main(int argc, char *argv[])
 			float theta = rand01() * 2 * PI;
 			particles[p].vx = r * cos(theta);
 			particles[p].vy = r * sin(theta);
+
+			// TODO: Check if the particle is too far away from a wall/slice
+			// limit to ever reach it at it's speed? This would eliminate
+			// a lot of calculations later.
+
+			// TODO: Hey, while we're at it - particles that are more than
+			// MAX_INITIAL_VELOCITY * TIME_STEPS
+			// units away from any wall can't affect the final
+			// calculated pressure at all!
 		}
 	}
 
@@ -239,8 +257,11 @@ int main(int argc, char *argv[])
 
 			// Inner particle loop
 			VT_enter(symdef_step_particle_inner, VT_NOSCL);
-			// Checks only the lower part of the
-			// (sd->current)^2 matrix (from po and down)
+			// Checks only the particles from po and down the line
+			// to reduce number of checks.
+
+			// TODO: If particles[] was sorted according to, for example, y position
+			// it would mean a lot better peformanceas checks
 			for(int pi = po+1; pi < sd->current; pi++)
 			{
 				float collision = collide(&particles[po], &particles[pi]);
@@ -307,6 +328,9 @@ int main(int argc, char *argv[])
 		}
 		VT_end(0); // Outer
 
+		// If this is the last time step, sending and receiving isn't really necessary,
+		// it is done to keep the stats correct at the summary
+
 		VT_enter(symdef_step_send, VT_NOSCL);
 		VT_enter(symdef_step_send_up, VT_NOSCL);
 		// Send up, but only if there's something to send
@@ -343,7 +367,7 @@ int main(int argc, char *argv[])
 				MPI_Get_count(& status, MPI_COORDINATE, & count);
 				MPI_Recv(particlesSendUp, count, MPI_COORDINATE, sliceBelow, TAG_SEND_UP, MPI_COMM_WORLD, &status);
 
-				// Insert sorted according to x position if possible?
+				// TODO: Insert sorted according to x position if possible?
 				// Would increase the chances of a collision with a neighbor
 				// and since collisions cut calculations, it would be efficient
 				for(int pr = 0; pr < count; pr++)
@@ -367,7 +391,7 @@ int main(int argc, char *argv[])
 				MPI_Get_count(& status, MPI_COORDINATE, & count);
 				MPI_Recv(particlesSendDown, count, MPI_COORDINATE, sliceAbove, TAG_SEND_DOWN, MPI_COMM_WORLD, & status);
 
-				// Insert sorted according to x position if possible?
+				// TODO: Insert sorted according to x position if possible?
 				// Would increase the chances of a collision with a neighbor
 				// and since collisions cut calculations, it would be efficient
 				for(int pr = 0; pr < count; pr++)
@@ -396,7 +420,6 @@ int main(int argc, char *argv[])
 
 	if(isMaster)
 	{
-
 		slice_data_t sums;
 		sums.current = 0;
 		sums.keeping = 0;
@@ -424,12 +447,7 @@ int main(int argc, char *argv[])
 
 		pmesg(70, "Calculate pressure\n");
 		{
-			float totalPressure = 0;
-			float averagePressure;
-			for(int i = 0; i < np; i++){
-				totalPressure += sliceData[i].pressure;
-			}
-			averagePressure = (totalPressure / (WALL_LENGTH * TIME_STEPS));
+			float averagePressure = (sums.pressure / (WALL_LENGTH * TIME_STEPS));
 			printf("Calculated pressure to be %.5f (%e) in a box with size %.1f by %.1f over %d time steps with %d particles.\n", averagePressure, averagePressure, BOX_HORIZ_SIZE, BOX_VERT_SIZE, TIME_STEPS, INIT_NO_PARTICLES*np);
 		}
 	}
